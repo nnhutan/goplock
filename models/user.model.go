@@ -1,42 +1,46 @@
 package models
 
 import (
-	"time"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id,omitempty" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
-	Name      string    `json:"name,omitempty" gorm:"type:varchar(255);not null"`
-	Email     string    `json:"email,omitempty" gorm:"type:varchar(255);not null;unique"`
-	Password  string    `json:"password,omitempty" gorm:"type:varchar(255);not null"`
-	CreatedAt time.Time `json:"created_at,omitempty" gorm:"type:timestamp;not null;default:now()"`
-	UpdatedAt time.Time `json:"updated_at,omitempty" gorm:"type:timestamp;not null;default:now()"`
+	gorm.Model
+	ID       uuid.UUID `json:"ID,omitempty" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	Name     string    `json:"Name,omitempty" gorm:"type:varchar(255);not null"`
+	Email    string    `json:"Email,omitempty" gorm:"type:varchar(255);not null;unique;" validate:"email,required"`
+	Password string    `json:"Password,omitempty" gorm:"type:varchar(255);not null;" validate:"required,min=8,max=32"`
+	Role     string    `json:"Role,omitempty" gorm:"type:varchar(255);not null;default:'user'"`
+	Provider string    `json:"Provider,omitempty" gorm:"type:varchar(255);not null;default:'local'"`
+	Photo    string    `json:"Photo,omitempty" gorm:"type:varchar(255);not null;default:'https://t4.ftcdn.net/jpg/05/49/98/39/360_F_549983970_bRCkYfk0P6PP5fKbMhZMIb07mCJ6esXL.jpg'"`
+	Verified bool      `json:"Verified,omitempty" gorm:"type:boolean;not null;default:false"`
 }
 
 var validate *validator.Validate = validator.New()
 
-type ErrorResponse struct {
-	FailedField string `json:"failed_field"`
-	Tag         string `json:"tag"`
-	Value       string `json:"value,omitempty"`
-}
-
-func ValidateStruct[T any](s T) []ErrorResponse {
-	var errors []ErrorResponse
+func ValidateStruct[T any](s T) []string {
+	var errors []string
 	err := validate.Struct(s)
+
 	if err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
-			errors = append(errors, ErrorResponse{
-				FailedField: err.Field(),
-				Tag:         err.Tag(),
-				Value:       err.Param(),
-			})
+			errors = append(errors, err.Field()+" does not satisfy "+err.Tag()+" condition")
 		}
 	}
 	return errors
+}
+
+func FilterUserRecord(user *User) UserResponse {
+	return UserResponse{
+		ID:       user.ID,
+		Name:     user.Name,
+		Email:    user.Email,
+		Role:     user.Role,
+		Photo:    user.Photo,
+		Provider: user.Provider,
+	}
 }
 
 type UserLogin struct {
@@ -45,7 +49,18 @@ type UserLogin struct {
 }
 
 type UserRegister struct {
-	Name     string `json:"name,omitempty" validate:"required"`
-	Email    string `json:"email,omitempty" validate:"required,email"`
-	Password string `json:"password,omitempty" validate:"required"`
+	Name                 string `json:"name,omitempty" validate:"required"`
+	Email                string `json:"email,omitempty" validate:"required,email"`
+	Photo                string `json:"photo,omitempty"`
+	Password             string `json:"password,omitempty" validate:"required,min=8,max=32"`
+	PasswordConfirmation string `json:"passwordConfirmation,omitempty" validate:"required,eqfield=Password"`
+}
+
+type UserResponse struct {
+	ID       uuid.UUID `json:"id,omitempty"`
+	Name     string    `json:"name,omitempty"`
+	Email    string    `json:"email,omitempty"`
+	Role     string    `json:"role,omitempty"`
+	Photo    string    `json:"photo,omitempty"`
+	Provider string    `json:"provider,omitempty"`
 }
