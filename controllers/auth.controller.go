@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -94,6 +95,10 @@ func Login(c *fiber.Ctx) error {
 		} else {
 			return utils.Error(c, fiber.StatusBadGateway, err.Error())
 		}
+	}
+
+	if user.Provider == "Google" && user.Password == "" {
+		return utils.Error(c, fiber.StatusUnauthorized, "Please login with Google")
 	}
 
 	err = utils.VerifyPassword(user.Password, payload.Password)
@@ -273,4 +278,68 @@ func VerifyEmail(c *fiber.Ctx) error {
 	db.Save(&updatedUser)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": "Email verified successfully"})
+}
+
+func GoogleOAuth(c *fiber.Ctx) error {
+	code := c.Query("code")
+	var pathUrl string = "/"
+
+	if c.Query("state") != "" {
+		pathUrl = c.Query("state")
+	}
+
+	if code == "" {
+		return utils.Error(c, fiber.StatusBadRequest, "Authorization code not provided!")
+	}
+
+	tokenRes, err := utils.GetGoogleOauthToken(code)
+
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadGateway, err.Error())
+	}
+
+	google_user, err := utils.GetGoogleUser(tokenRes.Access_token, tokenRes.Id_token)
+
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadGateway, err.Error())
+	}
+
+	email := strings.ToLower(google_user.Email)
+
+	user_data := models.User{
+		Name:     google_user.Name,
+		Email:    email,
+		Password: "",
+		Photo:    google_user.Picture,
+		Provider: "Google",
+		Role:     "user",
+		Verified: true,
+	}
+
+	db := initializers.DB
+
+	if db.Model(&user_data).Where("email = ?", email).Updates(&user_data).RowsAffected == 0 {
+		db.Create(&user_data)
+	}
+
+	var user models.User
+	db.First(&user, "email = ?", email)
+
+	config, _ := initializers.LoadConfig(".")
+	_, refreshTokenDetails, err := utils.GenerateTokenPair(user.ID.String(), &config)
+	if err != nil {
+		return utils.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    *refreshTokenDetails.Token,
+		Path:     "/",
+		MaxAge:   config.RefreshTokenMaxAge * 60,
+		Secure:   false,
+		HTTPOnly: true,
+		Domain:   "localhost",
+	})
+
+	return c.Redirect(fmt.Sprintf("%s%s", config.ClientOrigin, pathUrl), fiber.StatusTemporaryRedirect)
 }

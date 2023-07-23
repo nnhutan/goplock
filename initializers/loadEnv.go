@@ -13,8 +13,9 @@ type Config struct {
 	DBName         string `mapstructure:"POSTGRES_DB"`
 	DBPort         string `mapstructure:"POSTGRES_PORT"`
 
-	ClientOrigin string `mapstructure:"CLIENT_ORIGIN"`
-	ServerPort   string `mapstructure:"PORT"`
+	FrontEndOrigin string `mapstructure:"FRONTEND_ORIGIN"`
+	ClientOrigin   string `mapstructure:"CLIENT_ORIGIN"`
+	ServerPort     string `mapstructure:"PORT"`
 
 	RedisUri string `mapstructure:"REDIS_URI"`
 
@@ -32,6 +33,10 @@ type Config struct {
 	SMTPPass  string `mapstructure:"SMTP_PASS"`
 	SMTPPort  int    `mapstructure:"SMTP_PORT"`
 	SMTPUser  string `mapstructure:"SMTP_USER"`
+
+	GoogleClientID         string `mapstructure:"GOOGLE_OAUTH_CLIENT_ID"`
+	GoogleClientSecret     string `mapstructure:"GOOGLE_OAUTH_CLIENT_SECRET"`
+	GoogleOAuthRedirectUrl string `mapstructure:"GOOGLE_OAUTH_REDIRECT_URL"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
