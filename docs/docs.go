@@ -47,12 +47,24 @@ const docTemplate = `{
         },
         "/auth/logout": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Logout User",
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Logout",
-                "responses": {}
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
             }
         },
         "/auth/refresh": {
@@ -113,6 +125,11 @@ const docTemplate = `{
         },
         "/users": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all Users",
                 "tags": [
                     "User"
@@ -124,8 +141,30 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.User"
+                                "$ref": "#/definitions/models.UserResponse"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get current User",
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get Me",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserResponse"
                         }
                     }
                 }
@@ -133,6 +172,11 @@ const docTemplate = `{
         },
         "/users/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get User by ID",
                 "tags": [
                     "User"
@@ -151,7 +195,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/models.UserResponse"
                         }
                     }
                 }
@@ -159,64 +203,36 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "gorm.DeletedAt": {
+        "models.UserResponse": {
             "type": "object",
             "properties": {
-                "time": {
+                "email": {
                     "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
-        "models.User": {
-            "type": "object",
-            "required": [
-                "Email",
-                "Password"
-            ],
-            "properties": {
-                "Email": {
-                    "type": "string"
-                },
-                "ID": {
-                    "type": "string"
-                },
-                "Name": {
-                    "type": "string"
-                },
-                "Password": {
-                    "type": "string",
-                    "maxLength": 32,
-                    "minLength": 8
-                },
-                "Photo": {
-                    "type": "string"
-                },
-                "Provider": {
-                    "type": "string"
-                },
-                "Role": {
-                    "type": "string"
-                },
-                "Verified": {
-                    "type": "boolean"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
-                "updatedAt": {
+                "name": {
+                    "type": "string"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "role": {
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

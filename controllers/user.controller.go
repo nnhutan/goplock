@@ -8,12 +8,27 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// @Summary		Get Me
+// @Description	Get current User
+// @Tags			User
+// @Router			/users/me [GET]
+// @Success		200	{object}	models.UserResponse
+// @Security BearerAuth
+func GetMe(c *fiber.Ctx) error {
+	user := c.Locals("user").(models.UserResponse)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"data":    user,
+	})
+}
+
 // @Summary		Get User
 // @Description	Get User by ID
 // @Tags			User
 // @Param			id	path	string	true	"User ID"
 // @Router			/users/{id} [GET]
-// @Success		200	{object}	models.User
+// @Success		200	{object}	models.UserResponse
+// @Security BearerAuth
 func GetUser(c *fiber.Ctx) error {
 	db := initializers.DB
 	var user models.UserResponse
@@ -37,7 +52,8 @@ func GetUser(c *fiber.Ctx) error {
 // @Description	Get all Users
 // @Tags			User
 // @Router			/users [GET]
-// @Success		200	{array}	models.User
+// @Success		200	{array}	models.UserResponse
+// @Security BearerAuth
 func GetUsers(c *fiber.Ctx) error {
 	db := initializers.DB
 	users := new([]models.UserResponse)

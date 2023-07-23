@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/nnhutan/goplock/controllers"
+	"github.com/nnhutan/goplock/middlewares"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,6 +12,6 @@ func AuthRoutes(api *fiber.App) {
 		auth.Post("/register", controllers.Register)
 		auth.Post("/login", controllers.Login)
 		auth.Post("/refresh", controllers.RefreshAccessToken)
-		auth.Delete("/logout", controllers.Logout)
+		auth.Delete("/logout", middlewares.AuthenticateUser, controllers.Logout)
 	})
 }

@@ -16,6 +16,10 @@ import (
 // @version		v1
 // @produce		json
 // @consumes		json
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func SetupRoutes(app *fiber.App) {
 
 	api := fiber.New()

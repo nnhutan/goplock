@@ -75,7 +75,6 @@ func Register(c *fiber.Ctx) error {
 // @Router			/auth/login [POST]
 func Login(c *fiber.Ctx) error {
 	payload := new(models.UserLogin)
-	db := initializers.DB
 
 	if err := c.BodyParser(payload); err != nil {
 		return utils.Error(c, fiber.StatusBadRequest, err.Error())
@@ -87,7 +86,7 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	user := new(models.User)
-	err := db.First(&user, "email = ?", strings.ToLower(payload.Email)).Error
+	err := initializers.DB.First(&user, "email = ?", strings.ToLower(payload.Email)).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return utils.Error(c, fiber.StatusForbidden, "Invalid email or password")
@@ -98,32 +97,13 @@ func Login(c *fiber.Ctx) error {
 
 	err = utils.VerifyPassword(user.Password, payload.Password)
 	if err != nil {
-		return utils.Error(c, fiber.StatusBadGateway, "Invalid email or password")
+		return utils.Error(c, fiber.StatusForbidden, "Invalid email or password")
 	}
 
 	config, _ := initializers.LoadConfig(".")
-
-	accessTokenDetails, err := utils.CreateToken(user.ID.String(), config.AccessTokenExpiresIn, config.AccessTokenPrivateKey)
+	accessTokenDetails, refreshTokenDetails, err := utils.GenerateTokenPair(user.ID.String(), &config)
 	if err != nil {
 		return utils.Error(c, fiber.StatusUnprocessableEntity, err.Error())
-	}
-
-	refreshTokenDetails, err := utils.CreateToken(user.ID.String(), config.RefreshTokenExpiresIn, config.RefreshTokenPrivateKey)
-	if err != nil {
-		return utils.Error(c, fiber.StatusUnprocessableEntity, err.Error())
-	}
-
-	ctx := context.TODO()
-	now := time.Now()
-
-	errAccess := initializers.RedisClient.Set(ctx, accessTokenDetails.TokenUuid, user.ID.String(), time.Unix(*accessTokenDetails.ExpiresIn, 0).Sub(now)).Err()
-	if errAccess != nil {
-		return utils.Error(c, fiber.StatusUnprocessableEntity, errAccess.Error())
-	}
-
-	errRefresh := initializers.RedisClient.Set(ctx, refreshTokenDetails.TokenUuid, user.ID.String(), time.Unix(*refreshTokenDetails.ExpiresIn, 0).Sub(now)).Err()
-	if errAccess != nil {
-		return utils.Error(c, fiber.StatusUnprocessableEntity, errRefresh.Error())
 	}
 
 	c.Cookie(&fiber.Cookie{
@@ -144,9 +124,9 @@ func Login(c *fiber.Ctx) error {
 // @Tags			Auth
 // @Router			/auth/refresh [POST]
 func RefreshAccessToken(c *fiber.Ctx) error {
-	message := "could not refresh access token"
-
+	message := "Could not refresh access token"
 	refresh_token := c.Cookies("refresh_token")
+	redisClient := initializers.RedisClient
 
 	if refresh_token == "" {
 		return utils.Error(c, fiber.StatusForbidden, message)
@@ -160,33 +140,38 @@ func RefreshAccessToken(c *fiber.Ctx) error {
 		return utils.Error(c, fiber.StatusForbidden, err.Error())
 	}
 
-	userId, err := initializers.RedisClient.Get(ctx, tokenClaims.TokenUuid).Result()
+	userId, err := redisClient.Get(ctx, tokenClaims.TokenUuid).Result()
 	if err == redis.Nil {
 		return utils.Error(c, fiber.StatusForbidden, message)
 	}
 
 	var user models.User
 	err = initializers.DB.First(&user, "id = ?", userId).Error
-
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return utils.Error(c, fiber.StatusForbidden, "the user belonging to this token no logger exists")
+			return utils.Error(c, fiber.StatusForbidden, "The user belonging to this token no logger exists")
 		} else {
 			return utils.Error(c, fiber.StatusBadGateway, err.Error())
 		}
 	}
 
-	accessTokenDetails, err := utils.CreateToken(user.ID.String(), config.AccessTokenExpiresIn, config.AccessTokenPrivateKey)
+	redisClient.Del(ctx, tokenClaims.TokenUuid)
+
+	accessTokenDetails, refreshTokenDetails, err := utils.GenerateTokenPair(user.ID.String(), &config)
 	if err != nil {
 		return utils.Error(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	now := time.Now()
-
-	errAccess := initializers.RedisClient.Set(ctx, accessTokenDetails.TokenUuid, user.ID.String(), time.Unix(*accessTokenDetails.ExpiresIn, 0).Sub(now)).Err()
-	if errAccess != nil {
-		return utils.Error(c, fiber.StatusUnprocessableEntity, errAccess.Error())
-	}
+	// Refresh token rotation
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    *refreshTokenDetails.Token,
+		Path:     "/",
+		MaxAge:   config.RefreshTokenMaxAge * 60,
+		Secure:   false,
+		HTTPOnly: true,
+		Domain:   "localhost",
+	})
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "access_token": accessTokenDetails.Token})
 }
@@ -195,6 +180,9 @@ func RefreshAccessToken(c *fiber.Ctx) error {
 // @Description	Logout User
 // @Tags			Auth
 // @Router			/auth/logout [DELETE]
+// @Security BearerAuth
+// @Success 204
+// @Failure 403
 func Logout(c *fiber.Ctx) error {
 	message := "Token is invalid or session has expired"
 
@@ -212,7 +200,8 @@ func Logout(c *fiber.Ctx) error {
 		return utils.Error(c, fiber.StatusForbidden, err.Error())
 	}
 
-	_, err = initializers.RedisClient.Del(ctx, tokenClaims.TokenUuid).Result()
+	access_token_uuid := c.Locals("access_token_uuid").(string)
+	_, err = initializers.RedisClient.Del(ctx, tokenClaims.TokenUuid, access_token_uuid).Result()
 	if err != nil {
 		return utils.Error(c, fiber.StatusBadGateway, err.Error())
 	}
@@ -223,5 +212,5 @@ func Logout(c *fiber.Ctx) error {
 		Value:   "",
 		Expires: expired,
 	})
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success"})
+	return c.SendStatus(fiber.StatusNoContent)
 }
