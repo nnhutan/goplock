@@ -13,5 +13,8 @@ func AuthRoutes(api *fiber.App) {
 		auth.Post("/login", controllers.Login)
 		auth.Post("/refresh", controllers.RefreshAccessToken)
 		auth.Delete("/logout", middlewares.AuthenticateUser, controllers.Logout)
+
+		auth.Post("/verify-email", middlewares.AuthenticateUser, controllers.SendEmailVerification)
+		auth.Get("/verify-email/:code", controllers.VerifyEmail)
 	})
 }

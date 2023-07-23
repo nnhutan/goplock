@@ -9,6 +9,7 @@ import (
 	"github.com/nnhutan/goplock/models"
 	"github.com/nnhutan/goplock/utils"
 	"github.com/redis/go-redis/v9"
+	"github.com/thanhpk/randstr"
 	"gorm.io/gorm"
 
 	"github.com/gofiber/fiber/v2"
@@ -213,4 +214,63 @@ func Logout(c *fiber.Ctx) error {
 		Expires: expired,
 	})
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// @Summary		Send Email Verification
+// @Description	Send Email Verification
+// @Tags			Auth
+// @Router			/auth/verify-email [POST]
+// @Security BearerAuth
+// @Success 200
+// @Security BearerAuth
+func SendEmailVerification(c *fiber.Ctx) error {
+	code := randstr.String(20)
+	user := c.Locals("user").(*models.User)
+	verification_code := utils.Encode(code)
+
+	user.VerificationCode = verification_code
+	err := initializers.DB.Save(&user).Error
+	if err != nil {
+		return utils.Error(c, fiber.StatusBadGateway, err.Error())
+	}
+
+	config, _ := initializers.LoadConfig(".")
+
+	emailData := utils.EmailData{
+		URL:     config.ClientOrigin + "api/auth/verify-email/" + code,
+		Name:    user.Name,
+		Subject: "Your account verification code",
+	}
+
+	utils.SendEmail(user, &emailData)
+	message := "We sent an email with a verification code to " + user.Email
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": message})
+}
+
+// @Summary		Verify Email
+// @Description	Verify Email
+// @Tags			Auth
+// @Router			/auth/verify-email/{code} [GET]
+// @Param code path string true "Verification Code"
+// @Success 200
+func VerifyEmail(c *fiber.Ctx) error {
+	code := c.Params("code")
+	verification_code := utils.Encode(code)
+	db := initializers.DB
+
+	var updatedUser models.User
+	result := db.First(&updatedUser, "verification_code = ?", verification_code)
+	if result.Error != nil {
+		return utils.Error(c, fiber.StatusBadRequest, "Invalid verification code or user doesn't exists")
+	}
+
+	if updatedUser.Verified {
+		return utils.Error(c, fiber.StatusConflict, "User already verified")
+	}
+
+	updatedUser.VerificationCode = ""
+	updatedUser.Verified = true
+	db.Save(&updatedUser)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": "Email verified successfully"})
 }

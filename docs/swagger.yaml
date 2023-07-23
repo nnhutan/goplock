@@ -92,6 +92,33 @@ paths:
       summary: Register
       tags:
       - Auth
+  /auth/verify-email:
+    post:
+      description: Send Email Verification
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Send Email Verification
+      tags:
+      - Auth
+  /auth/verify-email/{code}:
+    get:
+      description: Verify Email
+      parameters:
+      - description: Verification Code
+        in: path
+        name: code
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Verify Email
+      tags:
+      - Auth
   /users:
     get:
       description: Get all Users

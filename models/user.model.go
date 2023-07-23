@@ -8,14 +8,15 @@ import (
 
 type User struct {
 	gorm.Model
-	ID       uuid.UUID `json:"ID,omitempty" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
-	Name     string    `json:"Name,omitempty" gorm:"type:varchar(255);not null"`
-	Email    string    `json:"Email,omitempty" gorm:"type:varchar(255);not null;unique;" validate:"email,required"`
-	Password string    `json:"Password,omitempty" gorm:"type:varchar(255);not null;" validate:"required,min=8,max=32"`
-	Role     string    `json:"Role,omitempty" gorm:"type:varchar(255);not null;default:'user'"`
-	Provider string    `json:"Provider,omitempty" gorm:"type:varchar(255);not null;default:'local'"`
-	Photo    string    `json:"Photo,omitempty" gorm:"type:varchar(255);not null;default:'https://t4.ftcdn.net/jpg/05/49/98/39/360_F_549983970_bRCkYfk0P6PP5fKbMhZMIb07mCJ6esXL.jpg'"`
-	Verified bool      `json:"Verified,omitempty" gorm:"type:boolean;not null;default:false"`
+	ID               uuid.UUID `json:"ID,omitempty" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	Name             string    `json:"Name,omitempty" gorm:"type:varchar(255);not null"`
+	Email            string    `json:"Email,omitempty" gorm:"type:varchar(255);not null;unique;" validate:"email,required"`
+	Password         string    `json:"Password,omitempty" gorm:"type:varchar(255);not null;" validate:"required,min=8,max=32"`
+	Role             string    `json:"Role,omitempty" gorm:"type:varchar(255);not null;default:'user'"`
+	Provider         string    `json:"Provider,omitempty" gorm:"type:varchar(255);not null;default:'local'"`
+	Photo            string    `json:"Photo,omitempty" gorm:"type:varchar(255);not null;default:'https://t4.ftcdn.net/jpg/05/49/98/39/360_F_549983970_bRCkYfk0P6PP5fKbMhZMIb07mCJ6esXL.jpg'"`
+	VerificationCode string
+	Verified         bool `json:"Verified,omitempty" gorm:"type:boolean;not null;default:false"`
 }
 
 var validate *validator.Validate = validator.New()
@@ -40,6 +41,7 @@ func FilterUserRecord(user *User) UserResponse {
 		Role:     user.Role,
 		Photo:    user.Photo,
 		Provider: user.Provider,
+		Verified: user.Verified,
 	}
 }
 
@@ -63,4 +65,5 @@ type UserResponse struct {
 	Role     string    `json:"role,omitempty"`
 	Photo    string    `json:"photo,omitempty"`
 	Provider string    `json:"provider,omitempty"`
+	Verified bool      `json:"verified,omitempty"`
 }

@@ -15,10 +15,10 @@ import (
 // @Success		200	{object}	models.UserResponse
 // @Security BearerAuth
 func GetMe(c *fiber.Ctx) error {
-	user := c.Locals("user").(models.UserResponse)
+	user := c.Locals("user").(*models.User)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"success": true,
-		"data":    user,
+		"data":    models.FilterUserRecord(user),
 	})
 }
 

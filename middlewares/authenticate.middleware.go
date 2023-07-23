@@ -41,10 +41,10 @@ func AuthenticateUser(c *fiber.Ctx) error {
 	err = initializers.DB.First(&user, "id = ?", userid).Error
 
 	if err == gorm.ErrRecordNotFound {
-		return utils.Error(c, fiber.StatusForbidden, "the user belonging to this token no logger exists")
+		return utils.Error(c, fiber.StatusForbidden, "The user belonging to this token no logger exists")
 	}
 
-	c.Locals("user", models.FilterUserRecord(user))
+	c.Locals("user", user)
 	c.Locals("access_token_uuid", tokenClaims.TokenUuid)
 
 	return c.Next()
