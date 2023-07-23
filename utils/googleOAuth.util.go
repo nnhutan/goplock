@@ -33,7 +33,6 @@ type GoogleUserResult struct {
 func GetGoogleOauthToken(code string) (*GoogleOauthToken, error) {
 	const rootURl = "https://oauth2.googleapis.com/token"
 
-	// code=4%2F0AZEOvhUFcrnD7tiCRL9icik1EFFbSoRBS3QqujHXfiyVyTA9dM2ZJPTV5qZyF8toADjWuw&redirect_uri=https%3A%2F%2Fdevelopers.google.com%2Foauthplayground&client_id=407343280800-4rje1o7ud0c5vn28kk16q6lqniih820e.apps.googleusercontent.com&client_secret=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&scope=&grant_type=authorization_code
 	config, _ := initializers.LoadConfig(".")
 	values := url.Values{}
 	values.Add("grant_type", "authorization_code")
