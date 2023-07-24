@@ -85,6 +85,33 @@ paths:
       summary: Logout
       tags:
       - Auth
+  /auth/password:
+    patch:
+      description: Change Password
+      parameters:
+      - description: Password
+        in: formData
+        name: oldPassword
+        required: true
+        type: string
+      - description: Password
+        in: formData
+        name: newPassword
+        required: true
+        type: string
+      - description: Password Confirm
+        in: formData
+        name: newPasswordConfirm
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Change Password
+      tags:
+      - Auth
   /auth/refresh:
     post:
       description: Refresh Access Token

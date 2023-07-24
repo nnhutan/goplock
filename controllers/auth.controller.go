@@ -438,3 +438,37 @@ func ResetPassword(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": "Password data updated successfully"})
 }
+
+// @Summary Change Password
+// @Description Change Password
+// @Tags Auth
+// @Security BearerAuth
+// @Router /auth/password [PATCH]
+// @Param oldPassword formData string true "Password"
+// @Param newPassword formData string true "Password"
+// @Param newPasswordConfirm formData string true "Password Confirm"
+// @Success 200
+func ChangePassword(c *fiber.Ctx) error {
+	var payload = new(models.UserChangePassword)
+
+	if err := c.BodyParser(payload); err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	currentUser := c.Locals("user").(*models.User)
+
+	err := utils.VerifyPassword(currentUser.Password, payload.OldPassword)
+	if err != nil {
+		return utils.Error(c, fiber.StatusForbidden, "Password is incorrect")
+	}
+
+	if payload.NewPassword != payload.NewPasswordConfirm {
+		return utils.Error(c, fiber.StatusBadRequest, "Passwords do not match")
+	}
+
+	hashedPassword, _ := utils.HashPassword(payload.NewPassword)
+	currentUser.Password = hashedPassword
+	initializers.DB.Save(&currentUser)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": "Password was changed successfully"})
+}

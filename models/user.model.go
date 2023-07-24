@@ -80,3 +80,9 @@ type UserResetPassword struct {
 	Password        string `json:"password" validate:"required,min=8,max=32"`
 	PasswordConfirm string `json:"passwordConfirm" validate:"required,eqfield=Password"`
 }
+
+type UserChangePassword struct {
+	OldPassword        string `json:"oldPassword" validate:"required,min=8,max=32"`
+	NewPassword        string `json:"newPassword" validate:"required,min=8,max=32"`
+	NewPasswordConfirm string `json:"newPasswordConfirm" validate:"required,eqfield=NewPassword"`
+}

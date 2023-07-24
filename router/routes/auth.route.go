@@ -21,5 +21,6 @@ func AuthRoutes(api *fiber.App) {
 
 		auth.Post("/forgot-password", controllers.ForgotPassword)
 		auth.Patch("/reset-password/:resetToken", controllers.ResetPassword)
+		auth.Patch("/password", middlewares.AuthenticateUser, controllers.ChangePassword)
 	})
 }
