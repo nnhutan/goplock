@@ -16,5 +16,10 @@ func AuthRoutes(api *fiber.App) {
 
 		auth.Post("/verify-email", middlewares.AuthenticateUser, controllers.SendEmailVerification)
 		auth.Get("/verify-email/:code", controllers.VerifyEmail)
+
+		auth.Get("/oauth/google", controllers.GoogleOAuth)
+
+		auth.Post("/forgot-password", controllers.ForgotPassword)
+		auth.Patch("/reset-password/:resetToken", controllers.ResetPassword)
 	})
 }

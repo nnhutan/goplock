@@ -1,7 +1,6 @@
 package router
 
 import (
-	"github.com/nnhutan/goplock/controllers"
 	"github.com/nnhutan/goplock/router/routes"
 
 	"github.com/gofiber/fiber/v2"
@@ -36,8 +35,4 @@ func SetupRoutes(app *fiber.App) {
 
 	routes.AuthRoutes(api)
 	routes.UserRoutes(api)
-
-	// External
-	app.Get("/sessions/oauth/google", controllers.GoogleOAuth)
-
 }

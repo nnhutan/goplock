@@ -19,6 +19,52 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/forgot-password": {
+            "post": {
+                "description": "Forgot Password",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Forgot Password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/auth/google": {
+            "get": {
+                "description": "Google GoogleOAuth",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Google GoogleOAuth",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization Code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login User",
@@ -121,6 +167,43 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {}
+            }
+        },
+        "/auth/reset-password/{resetToken}": {
+            "patch": {
+                "description": "Reset Password",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset Password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset Token",
+                        "name": "resetToken",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password Confirm",
+                        "name": "passwordConfirm",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
             }
         },
         "/auth/verify-email": {
@@ -268,6 +351,9 @@ const docTemplate = `{
                 },
                 "role": {
                     "type": "string"
+                },
+                "verified": {
+                    "type": "boolean"
                 }
             }
         }

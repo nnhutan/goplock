@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -247,7 +248,7 @@ func SendEmailVerification(c *fiber.Ctx) error {
 		Subject: "Your account verification code",
 	}
 
-	utils.SendEmail(user, &emailData)
+	utils.SendEmail(user, &emailData, "verificationCode.html")
 	message := "We sent an email with a verification code to " + user.Email
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": message})
 }
@@ -280,6 +281,12 @@ func VerifyEmail(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": "Email verified successfully"})
 }
 
+// @Summary Google GoogleOAuth
+// @Description Google GoogleOAuth
+// @Tags Auth
+// @Router /auth/google [GET]
+// @Param code query string true "Authorization Code"
+// @Success 200
 func GoogleOAuth(c *fiber.Ctx) error {
 	code := c.Query("code")
 	var pathUrl string = "/"
@@ -342,4 +349,92 @@ func GoogleOAuth(c *fiber.Ctx) error {
 	})
 
 	return c.Redirect(fmt.Sprintf("%s%s", config.ClientOrigin, pathUrl), fiber.StatusTemporaryRedirect)
+}
+
+// @Summary Forgot Password
+// @Description Forgot Password
+// @Tags Auth
+// @Router /auth/forgot-password [POST]
+// @Param email formData string true "Email"
+// @Success 200
+func ForgotPassword(c *fiber.Ctx) error {
+	payload := new(models.UserForgotPassword)
+
+	if err := c.BodyParser(payload); err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	message := "You will receive a reset email if user with that email exist"
+
+	var user models.User
+	result := initializers.DB.First(&user, "email = ?", strings.ToLower(payload.Email))
+	if result.Error != nil {
+		return utils.Error(c, fiber.StatusBadRequest, "Invalid email or Password")
+	}
+
+	if !user.Verified {
+		return utils.Error(c, fiber.StatusUnauthorized, "Account not verified")
+	}
+
+	config, err := initializers.LoadConfig(".")
+	if err != nil {
+		log.Fatal("Could not load config", err)
+	}
+
+	// Generate Verification Code
+	resetToken := randstr.String(20)
+
+	passwordResetToken := utils.Encode(resetToken)
+	user.PasswordResetToken = passwordResetToken
+	user.PasswordResetAt = time.Now().Add(time.Minute * 15)
+	initializers.DB.Save(&user)
+
+	emailData := utils.EmailData{
+		URL:     config.ClientOrigin + "/reset-password/" + resetToken,
+		Name:    user.Name,
+		Subject: "Your password reset token (valid for 10min)",
+	}
+
+	utils.SendEmail(&user, &emailData, "resetPassword.html")
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": message})
+}
+
+// @Summary Reset Password
+// @Description Reset Password
+// @Tags Auth
+// @Router /auth/reset-password/{resetToken} [PATCH]
+// @Param resetToken path string true "Reset Token"
+// @Param password formData string true "Password"
+// @Param passwordConfirm formData string true "Password Confirm"
+// @Success 200
+func ResetPassword(c *fiber.Ctx) error {
+	var payload = new(models.UserResetPassword)
+	resetToken := c.Params("resetToken")
+
+	if err := c.BodyParser(payload); err != nil {
+		return utils.Error(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	if payload.Password != payload.PasswordConfirm {
+		return utils.Error(c, fiber.StatusBadRequest, "Passwords do not match")
+	}
+
+	hashedPassword, _ := utils.HashPassword(payload.Password)
+
+	passwordResetToken := utils.Encode(resetToken)
+
+	var updatedUser models.User
+	result := initializers.DB.First(&updatedUser, "password_reset_token = ? AND password_reset_at > ?", passwordResetToken, time.Now())
+	if result.Error != nil {
+		return utils.Error(c, fiber.StatusBadRequest, "The reset token is invalid or has expired")
+	}
+
+	updatedUser.Password = hashedPassword
+	updatedUser.PasswordResetToken = ""
+	initializers.DB.Save(&updatedUser)
+
+	c.ClearCookie("refresh_token")
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"success": true, "message": "Password data updated successfully"})
 }

@@ -14,6 +14,8 @@ definitions:
         type: string
       role:
         type: string
+      verified:
+        type: boolean
     type: object
 host: localhost:8000
 info:
@@ -22,6 +24,36 @@ info:
   title: Goplock API
   version: v1
 paths:
+  /auth/forgot-password:
+    post:
+      description: Forgot Password
+      parameters:
+      - description: Email
+        in: formData
+        name: email
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Forgot Password
+      tags:
+      - Auth
+  /auth/google:
+    get:
+      description: Google GoogleOAuth
+      parameters:
+      - description: Authorization Code
+        in: query
+        name: code
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Google GoogleOAuth
+      tags:
+      - Auth
   /auth/login:
     post:
       description: Login User
@@ -90,6 +122,31 @@ paths:
         type: string
       responses: {}
       summary: Register
+      tags:
+      - Auth
+  /auth/reset-password/{resetToken}:
+    patch:
+      description: Reset Password
+      parameters:
+      - description: Reset Token
+        in: path
+        name: resetToken
+        required: true
+        type: string
+      - description: Password
+        in: formData
+        name: password
+        required: true
+        type: string
+      - description: Password Confirm
+        in: formData
+        name: passwordConfirm
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      summary: Reset Password
       tags:
       - Auth
   /auth/verify-email:
